@@ -25,5 +25,6 @@ def data_to_df(task, language, split):
         df = df.sample(frac=1, ignore_index=True)
         print(df.head(5)) 
         return df
+    
     else:
         return None

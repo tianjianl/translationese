@@ -109,17 +109,17 @@ def validate(epoch, tokenizer, model, device, val_loader):
     loss = np.mean(total_dev_loss)
     return predictions, actuals, loss
 
+
+class_dict = {'xnli': 3 ,
+              'pawsx': 2}
+
 def main(args):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
+    
     tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-base')
     xlmr_model = XLMRobertaModel.from_pretrained("xlm-roberta-base")
-    #xnli
-    n_class = 3
-    model = XLMRForSentenceClassification(xlmr_model, n_class)
-    model.to(device)
-
+    
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
     acc = evaluate.load("accuracy")
     loader_params = {
@@ -129,16 +129,22 @@ def main(args):
     }
     
     train_dataset = data_to_df(task = args.task, language = 'en', split = 'train')
+    
     print("TRAIN Dataset: {}".format(train_dataset.shape))
     train_dataset = CustomClassificationDataset(train_dataset, tokenizer, args.max_len)
     train_loader = DataLoader(train_dataset, **loader_params)
     
+    n_class = class_dict[args.task]
+    model = XLMRForSentenceClassification(xlmr_model, n_class)
+    model.to(device)
+
     val_loaders = []
     val_languages = ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el']
     for language in val_languages:
         val_dataset = data_to_df(task = args.task, language = language, split = 'dev')
         val_dataset = CustomClassificationDataset(val_dataset, tokenizer, args.max_len)
         val_loaders.append(DataLoader(val_dataset, **loader_params))
+    
     for epoch in range(args.epoch):
         train(epoch, tokenizer, model, device, train_loader, optimizer)
         for index, val_loader in enumerate(val_loaders):
