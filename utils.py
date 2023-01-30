@@ -1,11 +1,11 @@
-import pandas ad pd
+import pandas as pd
 
-def data_to_df(task, langauge, split):
+def data_to_df(task, language, split):
     
     if task == "xnli":
         filename = f"../xnli/{split}-{language}.tsv"
         f = open(filename, 'r')
-        source = []
+        src = []
         labels = []
         for line in f:
             cols = line.strip().split('\t')
@@ -17,10 +17,12 @@ def data_to_df(task, langauge, split):
                 label = 1
             elif cols[2] == 'contradiction':
                 label = 2
+                
             src.append(premise + " " + hypothesis)
             labels.append(label)
 
-        df = pd.DataFrame({"src": src, "label": label})
+        df = pd.DataFrame({"src": src, "label": labels})
+        df = df.sample(frac=1, ignore_index=True)
         print(df.head(5)) 
         return df
     else:
