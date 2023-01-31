@@ -96,8 +96,12 @@ def validate(epoch, tokenizer, model, device, val_loader):
 
 
 class_dict = {'xnli': 3 ,
-              'pawsx': 2}
+              'pawsx': 2, 
+              'ape': 2}
 
+val_languages_dict = {'xnli': ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el'], 
+                      'pawsx': ['en', 'de', 'es', 'fr', 'ja', 'ko', 'zh'],
+                      'ape': ['de']}
 def main(args):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -125,11 +129,11 @@ def main(args):
 
     cols = str(x).strip().split()
     datestr = cols[0] + '-' + cols[1].split(':')[0]
-    f = open(f'./logs/logs-{args.task}-{datestr}', 'a+')
     val_loaders = []
 
-    #val_languages = ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el']
-    val_languages = ['en', 'de', 'es', 'fr', 'ja', 'ko', 'zh']
+    val_languages = val_languages_dict[args.task]
+    print(val_languages)
+
     for language in val_languages:
         val_dataset = data_to_df(task = args.task, language = language, split = 'dev')
         val_dataset = CustomClassificationDataset(val_dataset, tokenizer, args.max_len)
@@ -143,6 +147,7 @@ def main(args):
             total_acc = []
             y_hat, y, dev_loss = validate(epoch, tokenizer, model, device, val_loader)       
             result = acc.compute(references = y, predictions = y_hat)
+            f = open(f'./logs/logs-{args.task}-{datestr}', 'a+')
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}", file=f)
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}")
             total_acc.append(result['accuracy'])
@@ -157,6 +162,7 @@ def main(args):
             total_acc = []
             y_hat, y, dev_loss = validate(epoch, tokenizer, model, device, val_loader)       
             result = acc.compute(references = y, predictions = y_hat)
+            f = open(f'./logs/logs-{args.task}-{datestr}', 'a+')
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}", file=f)
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}")
             total_acc.append(result['accuracy'])

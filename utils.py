@@ -42,8 +42,8 @@ def data_to_df(task, language, split):
         return df
     
     elif task == 'ape':
-        mt_filenames = glob.glob('../ape/*/*.mt')
-        pe_filenames = glob.glob('../ape/*/*.pe')
+        mt_filenames = glob('../ape/*/*.mt')
+        pe_filenames = glob('../ape/*/*.pe')
         src = []
         labels = []
         for mt_file in mt_filenames:
@@ -67,4 +67,4 @@ def data_to_df(task, language, split):
         df = pd.DataFrame({"src": src, "label": labels})
         df = df.sample(frac=1, ignore_index=True)
         print(df.head(5))
-        return df
+        return df.head(20000)
