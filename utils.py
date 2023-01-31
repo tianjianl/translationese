@@ -25,5 +25,17 @@ def data_to_df(task, language, split):
         df = df.sample(frac=1, ignore_index=True)
         print(df.head(5)) 
         return df
-    else:
-        return None
+    elif task == 'pawsx':
+        filename = f"../pawsx/{split}-{language}.tsv"
+        f = open(filename, 'r')
+        src = []
+        labels = []
+        for line in f:
+            cols = line.strip().split('\t')
+            src.append(cols[0] + ' ' + cols[1])
+            labels.append(int(cols[2]))
+        
+        df = pd.DataFrame({"src": src, "label": labels})
+        df = df.sample(frac=1, ignore_index=True)
+        print(df.head(5))
+        return df
