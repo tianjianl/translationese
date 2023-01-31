@@ -88,7 +88,6 @@ def validate(epoch, tokenizer, model, device, val_loader):
             actuals.extend(y)
             total_dev_loss.append(loss.item())
     
-    
     #print(predictions[:5])
     #print(actuals[:5])
     #print(f'evaluation used {now-start} seconds')
@@ -104,6 +103,7 @@ def main(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     n_class = class_dict[args.task]
     tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-base')
+    
     model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-base", num_labels=n_class)
     model.to(device)
 
@@ -135,7 +135,7 @@ def main(args):
         val_dataset = CustomClassificationDataset(val_dataset, tokenizer, args.max_len)
         val_loaders.append(DataLoader(val_dataset, **loader_params))
     
-    if args.epoch == 0:
+    if args.epoch == -1 or args.load_checkpoint:
         epoch = -1
         model.load_state_dict(torch.load(f"./{args.task}_latest.pth"))   
         print(f"loaded checkpoint at {args.task}_latest.pth")
@@ -166,6 +166,7 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--load_checkpoint", action='store_true')
     parser.add_argument("--epoch", default=15, type=int)
     parser.add_argument("--bs", default=32, type=int)
     parser.add_argument("--lr", default=0.0001, type=float)

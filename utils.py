@@ -1,5 +1,5 @@
 import pandas as pd
-
+from glob import glob
 def data_to_df(task, language, split):
     
     if task == "xnli":
@@ -25,7 +25,7 @@ def data_to_df(task, language, split):
         df = df.sample(frac=1, ignore_index=True)
         print(df.head(5)) 
         return df
-<<<<<<< HEAD
+    
     elif task == 'pawsx':
         filename = f"../pawsx/{split}-{language}.tsv"
         f = open(filename, 'r')
@@ -40,8 +40,31 @@ def data_to_df(task, language, split):
         df = df.sample(frac=1, ignore_index=True)
         print(df.head(5))
         return df
-=======
     
-    else:
-        return None
->>>>>>> 5053bae097b76dc91be2e4821ffe17865d5e518b
+    elif task == 'ape':
+        mt_filenames = glob.glob('../ape/*/*.mt')
+        pe_filenames = glob.glob('../ape/*/*.pe')
+        src = []
+        labels = []
+        for mt_file in mt_filenames:
+            if split not in mt_file:
+                continue
+            f = open(mt_file, 'r')
+            for line in f:
+                line = line.strip()
+                src.append(line)
+                labels.append(0)
+
+        for pe_file in pe_filenames:
+            if split not in pe_file:
+                continue
+            f = open(pe_file, 'r')
+            for line in f:
+                line = line.strip()
+                src.append(line)
+                labels.append(1)
+
+        df = pd.DataFrame({"src": src, "label": labels})
+        df = df.sample(frac=1, ignore_index=True)
+        print(df.head(5))
+        return df
