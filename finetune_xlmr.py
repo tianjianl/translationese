@@ -95,10 +95,14 @@ def validate(epoch, tokenizer, model, device, val_loader):
     loss = np.mean(total_dev_loss)
     return predictions, actuals, loss
 
+
+class_dict = {'xnli': 3 ,
+              'pawsx': 2}
+
 def main(args):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    n_class = 2 if args.task == 'pawsx' else 3
+    n_class = class_dict[args.task]
     tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-base')
     model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-base", num_labels=n_class)
     model.to(device)
@@ -112,6 +116,7 @@ def main(args):
     }
     
     train_dataset = data_to_df(task = args.task, language = 'en', split = 'train')
+    
     print("TRAIN Dataset: {}".format(train_dataset.shape))
     train_dataset = CustomClassificationDataset(train_dataset, tokenizer, args.max_len)
     train_loader = DataLoader(train_dataset, **loader_params)

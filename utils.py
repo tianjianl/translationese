@@ -25,6 +25,7 @@ def data_to_df(task, language, split):
         df = df.sample(frac=1, ignore_index=True)
         print(df.head(5)) 
         return df
+<<<<<<< HEAD
     elif task == 'pawsx':
         filename = f"../pawsx/{split}-{language}.tsv"
         f = open(filename, 'r')
@@ -39,3 +40,8 @@ def data_to_df(task, language, split):
         df = df.sample(frac=1, ignore_index=True)
         print(df.head(5))
         return df
+=======
+    
+    else:
+        return None
+>>>>>>> 5053bae097b76dc91be2e4821ffe17865d5e518b
