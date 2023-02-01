@@ -68,3 +68,40 @@ def data_to_df(task, language, split):
         df = df.sample(frac=1, ignore_index=True)
         print(df.head(5))
         return df.head(20000)
+
+    elif task == 'td':
+        src = []
+        labels = []
+        f = open('../de_original', 'r')
+        for line in f:
+            line = line.strip().split('.')
+            for sentence in line:
+                if len(sentence) <= 16:
+                    continue
+                src.append(sentence + ' . ')
+                labels.append(0)
+            
+            if len(labels) >= 50000:
+                break
+        
+        f = open('../de_translated_from_en', 'r')
+        for line in f:
+            line = line.strip()
+            src.append(line)
+            labels.append(1)
+            if len(labels) >= 100000:
+                break
+       
+        if split == 'train':
+            src = src[:80000]
+            labels = labels[:80000]
+        else:
+            src = src[80000:]
+            labels = labels[80000:]
+        print(split)
+        print(len(src))
+        print(len(labels))
+        
+        df = pd.DataFrame({"src": src, "label": labels})
+        df = df.sample(frac=1, ignore_index=True)
+        return df

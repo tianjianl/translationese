@@ -28,7 +28,7 @@ class CustomClassificationDataset(Dataset):
     def __getitem__(self, index):
         src = str(self.input[index])
         src = ' '.join(src.split())
-        source = self.tokenizer.batch_encode_plus([src], max_length=self.max_len, padding="max_length", return_tensors='pt')
+        source = self.tokenizer.batch_encode_plus([src], max_length=self.max_len, padding="max_length", truncation=True, return_tensors='pt')
         source_ids = source['input_ids'].squeeze()
         source_mask = source['attention_mask'].squeeze()
         
@@ -97,10 +97,12 @@ def validate(epoch, tokenizer, model, device, val_loader):
 
 class_dict = {'xnli': 3 ,
               'pawsx': 2, 
-              'ape': 2}
+              'ape': 2,
+              'td': 2}
 
 val_languages_dict = {'xnli': ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el'], 
                       'pawsx': ['en', 'de', 'es', 'fr', 'ja', 'ko', 'zh'],
+                      'td': ['en'],
                       'ape': ['de']}
 def main(args):
     
