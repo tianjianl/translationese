@@ -9,9 +9,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import cuda
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
-
 from transformers import XLMRobertaTokenizerFast, XLMRobertaForSequenceClassification
 from utils import data_to_df 
+
+from rotk import Regularizer
 
 class CustomClassificationDataset(Dataset):
 
@@ -41,7 +42,7 @@ class CustomClassificationDataset(Dataset):
             'label': tgt
         }
  
-def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None):
+def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None):
     model.train()
     start = time.time()
     loss_fn = nn.NLLLoss()
@@ -54,7 +55,9 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None):
         y_hat = output.logits
         y_hat = F.log_softmax(y_hat, dim=1)
         loss = loss_fn(y_hat, y)
-         
+        if regularizer != None:
+            loss += regularizer(model) 
+        
         if iteration%50 == 0:
             print(f'Epoch: {epoch}, Iteration: {iteration}, Loss:  {loss.item()}')
 
@@ -113,9 +116,6 @@ def main(args):
     model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-base", num_labels=n_class)
     model.to(device)
     
-    for parameter in model.parameters():
-        print(parameter)
-
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
     acc = evaluate.load("accuracy")
     loader_params = {
@@ -143,6 +143,10 @@ def main(args):
         val_dataset = data_to_df(task = args.task, language = language, split = 'dev')
         val_dataset = CustomClassificationDataset(val_dataset, tokenizer, args.max_len)
         val_loaders.append(DataLoader(val_dataset, **loader_params))
+    
+    regularizer = None
+    if args.regularizer != None:
+        regularizer = Regularizer(model = model, alpha = 1, dataset = train_loader, regularizer_type = args.regularizer)
     
     if args.epoch == -1 or args.load_checkpoint:
         epoch = -1
@@ -183,6 +187,7 @@ if __name__ == "__main__":
     parser.add_argument("--lr", default=0.0001, type=float)
     parser.add_argument("--task", default='xnli')
     parser.add_argument("--max_len", default=256, type=int)
+    parser.add_argument("--regularizer", default=None, type=String)
     args = parser.parse_args()
     
     for k, v in vars(args).items():
