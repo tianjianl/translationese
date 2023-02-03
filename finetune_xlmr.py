@@ -112,6 +112,9 @@ def main(args):
     
     model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-base", num_labels=n_class)
     model.to(device)
+    
+    for parameter in model.parameters():
+        print(parameter)
 
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
     acc = evaluate.load("accuracy")
