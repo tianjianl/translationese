@@ -13,6 +13,7 @@ import numpy as np
 from torch.autograd import Variable 
 
 class Regularizer(object):
+    
     def __init__(self, model, alpha, dataset, regularizer_type='l2'):
         self.model = model
         self.params = {n: p for n, p in self.model.named_parameters() if p.requires_grad}
@@ -53,7 +54,23 @@ class Regularizer(object):
         fisher = {n: p for n, p in fisher.items()}
         return fisher
 
-    def penalty(self, model):
+    def compute_sym_kl(self, noised_logits, input_logits):
+        return (
+            F.kl_div(F.log_softmax(noised_logits, dim=-1, dtype=torch.float32),
+                    F.softmax(input_logits, dim=-1, dtype=torch.float32),
+                    None,
+                    None,
+                    "sum",
+                    ) +
+            F.kl_div(F.softmax(input_logits, dim=-1, dtype=torch.float32),
+                    F.log_softmax(noised_logits, dim=-1, dtype=torch.float32)
+                    None,
+                    None,
+                    "sum",
+                   ) 
+              ) / noised_logits.size(0)
+        
+    def penalty(self, model, data_loader):
 
         loss = 0
         if self.regularizer == 'l2':
@@ -67,3 +84,13 @@ class Regularizer(object):
                 _loss = self.fisher[n] * (p - self._means[n]) ** 2
                 loss += _loss.sum()
             return self.alpha*loss
+        
+        elif self.regularizer == 'r3f':
+            noise_sampler = torch.distributions.normal.Normal(loc=0.0, scale=self.eps)
+            noise = noise_sampler.sample(sample.shape=token_embeddings.shape).to(token_embeddings)
+            noised_embeddings = token_embeddings.clone() + noise
+            # feed to the model
+            noised_logits, _ = model()
+            symm_kl = self.compute_sym_kl(noised_logits, input_logits)
+
+            return self.alpha * symm_kl
