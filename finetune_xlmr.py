@@ -1,5 +1,6 @@
 import time
 import torch
+import wandb
 import argparse
 import numpy as np
 import evaluate
@@ -58,6 +59,8 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
         if regularizer != None:
             loss += regularizer(model) 
         
+        if iteration%10 == 0:
+            wandb.log({"Training Loss": loss.item()})
         if iteration%50 == 0:
             print(f'Epoch: {epoch}, Iteration: {iteration}, Loss:  {loss.item()}')
 
@@ -110,11 +113,17 @@ val_languages_dict = {'xnli': ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', '
 def main(args):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    wandb.init(project=f"xlmr_robust_ft", entity="dogtooooth", name=f"{args.lr}-{args.seed}-{args.task}-{args.regularizer}")
+
     n_class = class_dict[args.task]
     tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-base')
     
     model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-base", num_labels=n_class)
     model.to(device)
+    
+    torch.manual_seed(args.seed) # pytorch random seed
+    np.random.seed(args.seed) # numpy random seed
+    torch.backends.cudnn.deterministic = True
     
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
     acc = evaluate.load("accuracy")
@@ -147,7 +156,8 @@ def main(args):
     regularizer = None
     if args.regularizer != None:
         regularizer = Regularizer(model = model, alpha = 1, dataset = train_loader, regularizer_type = args.regularizer)
-    
+
+    wandb.watch(model, log="all")
     if args.epoch == -1 or args.load_checkpoint:
         epoch = -1
         model.load_state_dict(torch.load(f"./{args.task}_latest.pth"))   
@@ -157,11 +167,9 @@ def main(args):
             y_hat, y, dev_loss = validate(epoch, tokenizer, model, device, val_loader)       
             result = acc.compute(references = y, predictions = y_hat)
             f = open(f'./logs/logs-{args.task}-{datestr}', 'a+')
-            print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}", file=f)
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}")
             total_acc.append(result['accuracy'])
         print(f"total acc = {np.mean(total_acc)}")    
-        print(f"total acc = {np.mean(total_acc)}", file=f)
                    
     for epoch in range(args.epoch):
         train(epoch, tokenizer, model, device, train_loader, optimizer)
@@ -172,11 +180,9 @@ def main(args):
             y_hat, y, dev_loss = validate(epoch, tokenizer, model, device, val_loader)       
             result = acc.compute(references = y, predictions = y_hat)
             f = open(f'./logs/logs-{args.task}-{datestr}', 'a+')
-            print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}", file=f)
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}")
             total_acc.append(result['accuracy'])
             
-        print(f"epoch = {epoch} | acc = {np.mean(total_acc)}", file=f)
         print(f"epoch = {epoch} | acc = {np.mean(total_acc)}")
     
 if __name__ == "__main__":
@@ -186,8 +192,9 @@ if __name__ == "__main__":
     parser.add_argument("--bs", default=32, type=int)
     parser.add_argument("--lr", default=0.0001, type=float)
     parser.add_argument("--task", default='xnli')
+    parser.add_argument("--seed", default=1005, type=int)
     parser.add_argument("--max_len", default=256, type=int)
-    parser.add_argument("--regularizer", default=None, type=String)
+    parser.add_argument("--regularizer", default=None)
     args = parser.parse_args()
     
     for k, v in vars(args).items():

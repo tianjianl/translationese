@@ -4,14 +4,17 @@ Author: Tianjian Li
 Date: Feb 2, 2023
 
 Code adapted from https://github.com/moskomule/ewc.pytorch/blob/master/utils.py
+and
+https://github.com/facebookresearch/fairseq/blob/main/examples/rxf/rxf_src/label_smoothed_cross_entropy_r3f.py
 '''
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from torch.autograd import Variable 
 
+from torch.autograd import Variable 
+from copy import deepcopy
 class Regularizer(object):
     
     def __init__(self, model, alpha, dataset, regularizer_type='l2'):
@@ -23,17 +26,17 @@ class Regularizer(object):
         self.regularizer = regularizer_type
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        if regularizer == 'ewc':
-            self.fisher = self.compute_fisher(self)
+        if regularizer_type == 'ewc':
+            self.fisher = self.compute_fisher()
         
         for n, p in deepcopy(self.params).items():
-            self._means[n] = variable(p.data)
+            self._means[n] = Variable(p.data)
     
     def compute_fisher(self):
         fisher = {}
         for n, p in deepcopy(self.params).items():
             p.data.zero_()
-            fisher[n] = variable(p.data)
+            fisher[n] = Variable(p.data)
 
         #self.model.eval()
         for data in self.dataset:
@@ -63,14 +66,13 @@ class Regularizer(object):
                     "sum",
                     ) +
             F.kl_div(F.softmax(input_logits, dim=-1, dtype=torch.float32),
-                    F.log_softmax(noised_logits, dim=-1, dtype=torch.float32)
+                    F.log_softmax(noised_logits, dim=-1, dtype=torch.float32),
                     None,
                     None,
                     "sum",
                    ) 
               ) / noised_logits.size(0)
     
-    def curvature_freezing(self, ro):
 
     def penalty(self, model, data_loader):
 
@@ -89,7 +91,7 @@ class Regularizer(object):
         
         elif self.regularizer == 'r3f':
             noise_sampler = torch.distributions.normal.Normal(loc=0.0, scale=self.eps)
-            noise = noise_sampler.sample(sample.shape=token_embeddings.shape).to(token_embeddings)
+            noise = noise_sampler.sample(sample_shape=token_embeddings.shape).to(token_embeddings)
             noised_embeddings = token_embeddings.clone() + noise
             # feed to the model
             noised_logits, _ = model()

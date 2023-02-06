@@ -14,7 +14,7 @@
 # limitations under the License.
 
 REPO=$PWD
-DIR=$REPO/download/
+DIR=$REPO/../download
 mkdir -p $DIR
 
 # download XNLI dataset
