@@ -69,7 +69,9 @@ class Regularizer(object):
                     "sum",
                    ) 
               ) / noised_logits.size(0)
-        
+    
+    def curvature_freezing(self, ro):
+
     def penalty(self, model, data_loader):
 
         loss = 0
