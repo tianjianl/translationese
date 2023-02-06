@@ -1,4 +1,7 @@
 # Translationese
 
+## Getting Started
+`pip3 install -r requirements.txt`
 
-## Dataset 
+## Reproducing
+- PAWS-X `bash scripts/pawsx.sh`
