@@ -138,13 +138,8 @@ def main(args):
     print("TRAIN Dataset: {}".format(train_dataset.shape))
     train_dataset = CustomClassificationDataset(train_dataset, tokenizer, args.max_len)
     train_loader = DataLoader(train_dataset, **loader_params)
-    
-    x = datetime.datetime.now()
-
-    cols = str(x).strip().split()
-    datestr = cols[0] + '-' + cols[1].split(':')[0]
+  
     val_loaders = []
-
     val_languages = val_languages_dict[args.task]
     print(val_languages)
 
@@ -166,7 +161,6 @@ def main(args):
             total_acc = []
             y_hat, y, dev_loss = validate(epoch, tokenizer, model, device, val_loader)       
             result = acc.compute(references = y, predictions = y_hat)
-            f = open(f'./logs/logs-{args.task}-{datestr}', 'a+')
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}")
             total_acc.append(result['accuracy'])
         print(f"total acc = {np.mean(total_acc)}")    
@@ -179,7 +173,6 @@ def main(args):
             total_acc = []
             y_hat, y, dev_loss = validate(epoch, tokenizer, model, device, val_loader)       
             result = acc.compute(references = y, predictions = y_hat)
-            f = open(f'./logs/logs-{args.task}-{datestr}', 'a+')
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}")
             total_acc.append(result['accuracy'])
             
