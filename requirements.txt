@@ -4,3 +4,4 @@ evaluate
 argparse
 scikit-learn
 transformers
+wandb
