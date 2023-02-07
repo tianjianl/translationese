@@ -59,7 +59,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
         if regularizer != None:
             loss += regularizer(model) 
         
-        if iteration%10 == 0:
+        if iteration%50 == 0:
             wandb.log({"Training Loss": loss.item()})
         if iteration%50 == 0:
             print(f'Epoch: {epoch}, Iteration: {iteration}, Loss:  {loss.item()}')
