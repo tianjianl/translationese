@@ -56,9 +56,9 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
         y_hat = output.logits
         y_hat = F.log_softmax(y_hat, dim=1)
         loss = loss_fn(y_hat, y)
+        
         if regularizer != None:
             loss += regularizer.penalty(model, input_ids = x, attention_mask = x_mask) 
-        
         if iteration%50 == 0:
             wandb.log({"Training Loss": loss.item()})
         if iteration%50 == 0:
@@ -106,8 +106,8 @@ class_dict = {'xnli': 3 ,
               'ape': 2,
               'td': 2}
 
-val_languages_dict = {'xnli': ['de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el'], 
-                      'pawsx': ['de', 'es', 'fr', 'ja', 'ko', 'zh'],
+val_languages_dict = {'xnli': ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el'], 
+                      'pawsx': ['en', 'de', 'es', 'fr', 'ja', 'ko', 'zh'],
                       'td': ['en'],
                       'ape': ['de']}
 def main(args):
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument("--bs", default=32, type=int)
     parser.add_argument("--lr", default=0.0001, type=float)
     parser.add_argument("--task", default='xnli')
-    parser.add_argument("--seed", default=1005, type=int)
+    parser.add_argument("--seed", default=810975, type=int)
     parser.add_argument("--max_len", default=256, type=int)
     parser.add_argument("--regularizer", default=None)
     args = parser.parse_args()
