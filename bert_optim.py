@@ -4,7 +4,7 @@ import math
 import torch
 from torch.optim import Optimizer
 from torch.nn.utils import clip_grad_norm_
-from pytorch_pretrained_bert.optimization import warmup_constant, warmup_cosine, warmup_linear
+#from pytorch_pretrained_bert.optimization import warmup_constant, warmup_cosine, warmup_linear
 from typing import Callable, Iterable, Tuple
 
 def warmup_linear_xdl(x, warmup=0.002):
