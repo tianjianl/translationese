@@ -77,7 +77,7 @@ class Regularizer(object):
                    ) 
               ) / noised_logits.size(0)
     
-
+    
     def penalty(self, model, input_ids, attention_mask):
 
         loss = 0
@@ -100,8 +100,8 @@ class Regularizer(object):
 
             noise_sampler = torch.distributions.normal.Normal(loc=0.0, scale=self.eps)
             noise = noise_sampler.sample(sample_shape=token_embeddings.shape).to(token_embeddings)
-            # feed to the model
             
+            # feed to the model
             clean_embeddings = embedder(input_ids=input_ids)
             noised_embeddings = clean_embeddings.clone() + noise
 

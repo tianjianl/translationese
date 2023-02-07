@@ -125,7 +125,12 @@ def main(args):
     np.random.seed(args.seed) # numpy random seed
     torch.backends.cudnn.deterministic = True
     
+    if args.sage:
+        print(f"--sage marker detected, using AdamW with lr adaptive to param importance")
+        from bert_optim import UnstructAwareAdamW
+        optimizer = UnstructAwareAdamW(params=model.parameters(), lr=args.lr) 
     optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
+    
     acc = evaluate.load("accuracy")
     loader_params = {
         'batch_size': args.bs,
@@ -187,6 +192,7 @@ if __name__ == "__main__":
     parser.add_argument("--task", default='xnli')
     parser.add_argument("--seed", default=810975, type=int)
     parser.add_argument("--max_len", default=256, type=int)
+    parser.add_argument("--sage", action='store_true')
     parser.add_argument("--regularizer", default=None)
     args = parser.parse_args()
     
