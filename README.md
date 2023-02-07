@@ -19,3 +19,9 @@ python3 finetune_xlmr.py --task {your task} \
 ```
 
 The arguments should be self explainatory.
+
+## Supported Tricks
+
+- EWC https://arxiv.org/abs/1612.00796
+- R3F https://arxiv.org/abs/2008.03156
+- SAGE https://arxiv.org/abs/2202.02664
