@@ -106,19 +106,19 @@ class_dict = {'xnli': 3 ,
               'ape': 2,
               'td': 2}
 
-val_languages_dict = {'xnli': ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el'], 
-                      'pawsx': ['en', 'de', 'es', 'fr', 'ja', 'ko', 'zh'],
+val_languages_dict = {'xnli': ['de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el'], 
+                      'pawsx': ['de', 'es', 'fr', 'ja', 'ko', 'zh'],
                       'td': ['en'],
                       'ape': ['de']}
 def main(args):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    wandb.init(project=f"xlmr_robust_ft", entity="dogtooooth", name=f"{args.lr}-{args.seed}-{args.task}-{args.regularizer}")
+    wandb.init(project=f"xlmr_large_robust_ft", entity="dogtooooth", name=f"{args.lr}-{args.seed}-{args.task}-{args.regularizer}")
 
     n_class = class_dict[args.task]
-    tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-base')
+    tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-large')
     
-    model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-base", num_labels=n_class)
+    model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-large", num_labels=n_class)
     model.to(device)
     
     torch.manual_seed(args.seed) # pytorch random seed
