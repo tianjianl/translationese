@@ -13,6 +13,9 @@ To run an experiment with your own task and set of hyper-parameters:
 
 First see `utils.py` and add your task, then run
 
-`python3 finetune_xlmr.py --task {your task} --lr {learning rate} --bs {batch size} --regularizer {ewc or r3f}`
+```
+python3 finetune_xlmr.py --task {your task} \
+--lr {learning rate} --bs {batch size} --regularizer {ewc or r3f} --epoch {num epochs}
+```
 
 The arguments should be self explainatory.
