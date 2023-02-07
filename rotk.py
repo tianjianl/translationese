@@ -15,6 +15,10 @@ import numpy as np
 
 from torch.autograd import Variable 
 from copy import deepcopy
+
+from transformers import XLMRobertaConfig 
+from transformers.models.xlm_roberta.modeling_xlm_roberta import XLMRobertaEmbeddings
+
 class Regularizer(object):
     
     def __init__(self, model, alpha, dataset, regularizer_type='l2'):
@@ -74,7 +78,7 @@ class Regularizer(object):
               ) / noised_logits.size(0)
     
 
-    def penalty(self, model, data_loader):
+    def penalty(self, model, input_ids, attention_mask):
 
         loss = 0
         if self.regularizer == 'l2':
@@ -90,11 +94,23 @@ class Regularizer(object):
             return self.alpha*loss
         
         elif self.regularizer == 'r3f':
+            
+            config = XLMRobertaConfig() 
+            embedder = XLMRobertaEmbeddings(config)
+
             noise_sampler = torch.distributions.normal.Normal(loc=0.0, scale=self.eps)
             noise = noise_sampler.sample(sample_shape=token_embeddings.shape).to(token_embeddings)
-            noised_embeddings = token_embeddings.clone() + noise
             # feed to the model
-            noised_logits, _ = model()
-            symm_kl = self.compute_sym_kl(noised_logits, input_logits)
+            
+            clean_embeddings = embedder(input_ids=input_ids)
+            noised_embeddings = clean_embeddings.clone() + noise
+
+            clean_logits = model(attention_mask=attention_mask, inputs_embeds=clean_embeddings)
+            noised_logits = model(attention_mask=attention_mask, inputs_embeds=noised_embeddings)
+            
+            clean_logits = clean_logits.logits
+            noised_logits = noised_logits.logits
+
+            symm_kl = self.compute_sym_kl(noised_logits, clean_logits)
 
             return self.alpha * symm_kl

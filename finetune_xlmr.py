@@ -57,7 +57,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
         y_hat = F.log_softmax(y_hat, dim=1)
         loss = loss_fn(y_hat, y)
         if regularizer != None:
-            loss += regularizer(model) 
+            loss += regularizer.penalty(model, input_ids = x, attention_mask = x_mask) 
         
         if iteration%50 == 0:
             wandb.log({"Training Loss": loss.item()})
