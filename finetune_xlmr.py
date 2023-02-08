@@ -131,8 +131,9 @@ def main(args):
     if args.sage:
         print(f"--sage marker detected, using AdamW with lr adaptive to param importance")
         from bert_optim import UnstructAwareAdamW
-        optimizer = UnstructAwareAdamW(params=model.parameters(), lr=args.lr) 
-    optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
+        optimizer = UnstructAwareAdamW(params=model.parameters(), lr=args.lr)
+    else:
+        optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
     
     acc = evaluate.load("accuracy")
     loader_params = {
