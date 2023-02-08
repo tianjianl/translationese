@@ -113,7 +113,10 @@ val_languages_dict = {'xnli': ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', '
 def main(args):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    wandb.init(project=f"xlmr_large_robust_ft", entity="dogtooooth", name=f"{args.lr}-{args.seed}-{args.task}-{args.regularizer}")
+    wandb_name = f"{args.lr}-{args.seed}-{args.task}-{args.regularizer}"
+    if args.sage:
+        wandb_name += '-sage'
+    wandb.init(project=f"xlmr_large_robust_ft", entity="dogtooooth", name=wandb_name)
 
     n_class = class_dict[args.task]
     tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-large')
