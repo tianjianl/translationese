@@ -10,7 +10,7 @@ To download the data: `bash scripts/download_data.sh`
 
 - XNLI `bash scripts/xnli.sh`
 
-### Results 
+### XLM-R Large Results 
 | Setting | XNLI | PAWSX |
 | ------- | ---- | ----- |
 | [Reported](https://arxiv.org/abs/1911.02116)| 79.2 | 86.4 |
