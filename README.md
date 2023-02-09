@@ -13,7 +13,7 @@ To download the data: `bash scripts/download_data.sh`
 ### Results 
 | Setting | XNLI | PAWSX |
 | ------- | ---- | ----- |
-| Reported| 79.2 | 86.4 |
+| [Reported](https://arxiv.org/abs/1911.02116)| 79.2 | 86.4 |
 | Reproduced | 81.5 | 84.8|
 
 ### Running with your own configuration of hyper-parameters
