@@ -6,10 +6,17 @@ To install the dependencies: `pip3 install -r requirements.txt`
 To download the data: `bash scripts/download_data.sh`
 
 ## Reproducing
-- PAWS-X `bash scripts/pawsx.sh`
+- PAWS-X `bash scripts/pawsx.sh` 
+
 - XNLI `bash scripts/xnli.sh`
 
-To run an experiment with your own task and set of hyper-parameters:
+### Results 
+| Setting | XNLI | PAWSX |
+| ------- | ---- | ----- |
+| Reported| 79.2 | 86.4 |
+| Reproduced | 81.5 | 84.8|
+
+### Running with your own configuration of hyper-parameters
 
 First see `utils.py` and add your task, then run
 
