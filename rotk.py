@@ -42,7 +42,7 @@ class Regularizer(object):
             p.data.zero_()
             fisher[n] = Variable(p.data)
 
-        #self.model.eval()
+        self.model.eval()
         for data in self.dataset:
             x = data['source_ids'].to(self.device, dtype = torch.long)
             x_mask = data['source_mask'].to(self.device, dtype = torch.long)
