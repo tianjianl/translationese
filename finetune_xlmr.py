@@ -43,10 +43,13 @@ class CustomClassificationDataset(Dataset):
             'label': tgt
         }
  
-def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None):
+def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None):
     model.train()
     start = time.time()
     loss_fn = nn.NLLLoss()
+    
+    #initializing parameter importance dictionary
+
     for iteration, data in enumerate(loader, 0):
         x = data['source_ids'].to(device, dtype = torch.long)
         x_mask = data['source_mask'].to(device, dtype = torch.long)
@@ -61,16 +64,30 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
             loss += regularizer.penalty(model, input_ids = x, attention_mask = x_mask) 
         if iteration%50 == 0:
             wandb.log({"Training Loss": loss.item()})
-        if iteration%50 == 0:
             print(f'Epoch: {epoch}, Iteration: {iteration}, Loss:  {loss.item()}')
-
+        
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-    
+        
+        if iteration%200 == 0 and param_importance_dict != None:
+            #update param_importance_dict
+            for name, params in model.named_parameters():
+                if params.requires_grad:
+                    grad = params.grad.clone().detach().view(-1)
+                    params = params.clone().detach().view(-1)
+                    score = torch.abs(grad*params)
+                    score = score.to("cpu")
+                    score = torch.mean(score)
+                    param_importance_dict[name].append(score.item())
+            
+            temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1])
+            
+            for item in temp[-10:]:
+                print(item[0])
     end = time.time()
     print(f'Epoch: {epoch} used {end-start} seconds')
-
+    
 def validate(epoch, tokenizer, model, device, val_loader):
     
     model.eval()
@@ -128,6 +145,11 @@ def main(args):
     np.random.seed(args.seed) # numpy random seed
     torch.backends.cudnn.deterministic = True
     
+    param_importance_dict = None
+    if args.plot_params:
+        print(f"--plot_params argument detected, printing the param importance while training")
+        param_importance_dict = {n: [] for n, p in model.named_parameters() if p.requires_grad}
+
     if args.sage:
         print(f"--sage marker detected, using AdamW with lr adaptive to param importance")
         from bert_optim import UnstructAwareAdamW
@@ -175,7 +197,7 @@ def main(args):
         print(f"total acc = {np.mean(total_acc)}")    
                    
     for epoch in range(args.epoch):
-        train(epoch, tokenizer, model, device, train_loader, optimizer)
+        train(epoch, tokenizer, model, device, train_loader, optimizer, param_importance_dict=param_importance_dict)
         torch.save(model.state_dict(), f"{args.task}_latest.pth")
         
         for index, val_loader in enumerate(val_loaders):
@@ -194,9 +216,10 @@ if __name__ == "__main__":
     parser.add_argument("--bs", default=32, type=int)
     parser.add_argument("--lr", default=0.0001, type=float)
     parser.add_argument("--task", default='xnli')
-    parser.add_argument("--seed", default=810975, type=int)
+    parser.add_argument("--seed", default=1104, type=int)
     parser.add_argument("--max_len", default=256, type=int)
     parser.add_argument("--sage", action='store_true')
+    parser.add_argument("--plot_params", action='store_true')
     parser.add_argument("--regularizer", default=None)
     args = parser.parse_args()
     
