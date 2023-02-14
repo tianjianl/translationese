@@ -402,7 +402,7 @@ class AdamW(Optimizer):
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
-                # since that will interact with the m and v parameters in strange ways.
+                # since that will interact with the m and v parameters in strange ways
                 #
                 # Instead we want to decay the weights in a manner that doesn't interact
                 # with the m/v parameters. This is equivalent to adding the square
@@ -500,7 +500,7 @@ class UnstructAwareAdamW(Optimizer):
 
         for group in self.param_groups:
             beta1, beta2, beta3 = group["betas"]
-
+            #print(group.keys())
             if group['params_type'] == 'common':
                 for p in group["params"]:
                     if p.grad is None:

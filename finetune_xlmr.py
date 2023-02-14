@@ -127,6 +127,30 @@ val_languages_dict = {'xnli': ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', '
                       'pawsx': ['en', 'de', 'es', 'fr', 'ja', 'ko', 'zh'],
                       'td': ['en'],
                       'ape': ['de']}
+
+def get_usadam_param_groups(model):
+    no_decay = ['bias', 'gamma', 'beta', 'LayerNorm.bias', 'LayerNorm.weight']
+    mask = ['attention.self', 'attention.output.dense', 'output.dense', 'intermediate.dense']
+
+    mask_params = [(n, p) for n, p in model.named_parameters() if any(nd in n for nd in mask)]
+    common_params = [(n, p) for n, p in model.named_parameters() if not any(nd in n for nd in mask)]
+
+    optimizer_parameters = [
+        {'params': [p for n, p in common_params if not any(nd in n for nd in no_decay)],
+         'weight_decay': 0.01,
+         'params_type': 'common'},
+        {'params': [p for n, p in mask_params if not any(nd in n for nd in no_decay)],
+         'weight_decay': 0.01,
+         'params_type': 'mask'},
+        {'params': [p for n, p in common_params if any(nd in n for nd in no_decay)],
+         'weight_decay': 0,
+         'params_type': 'common'},
+        {'params': [p for n, p in mask_params if any(nd in n for nd in no_decay)],
+         'weight_decay': 0,
+         'params_type': 'mask'},
+        ]
+    return optimizer_parameters
+
 def main(args):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -153,7 +177,8 @@ def main(args):
     if args.sage:
         print(f"--sage marker detected, using AdamW with lr adaptive to param importance")
         from bert_optim import UnstructAwareAdamW
-        optimizer = UnstructAwareAdamW(params=model.parameters(), lr=args.lr)
+        optimizer_parameters = get_usadam_param_groups(model)
+        optimizer = UnstructAwareAdamW(params=optimizer_parameters, lr=args.lr)
     else:
         optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
     
