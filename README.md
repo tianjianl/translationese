@@ -15,7 +15,7 @@ To download the data: `bash scripts/download_data.sh`
 | ------- | ---- | ----- |
 | [Reported](https://arxiv.org/abs/1911.02116)| 79.2 | 86.4 |
 | Reproduced | 81.5 | 84.8|
-| SAGE | | 83.5 |
+| SAGE | 80.3 | 83.5 |
 
 ### Running with your own configuration of hyper-parameters
 
