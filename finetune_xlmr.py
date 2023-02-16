@@ -78,13 +78,18 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
                     params = params.clone().detach().view(-1)
                     score = torch.abs(grad*params)
                     score = score.to("cpu")
-                    score = torch.mean(score)
-                    param_importance_dict[name].append(score.item())
+                    
+                    mu = torch.mean(score)
+                    sigma = torch.std(score)
+                    param_importance_dict[name].append((mu.item(), sigma.item()))
             
-            temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1])
+            temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1][0])
             
-            for item in temp[-10:]:
+            for item in temp:
                 print(item[0])
+                print(f"mean = {param_importance_dict[item[0]][-1][0]}")
+                print(f"std = {param_importance_dict[item[0]][-1][1]}")
+    
     end = time.time()
     print(f'Epoch: {epoch} used {end-start} seconds')
     
