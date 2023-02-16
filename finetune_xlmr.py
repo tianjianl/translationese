@@ -173,7 +173,7 @@ def main(args):
     if args.plot_params:
         print(f"--plot_params argument detected, printing the param importance while training")
         param_importance_dict = {n: [] for n, p in model.named_parameters() if p.requires_grad}
-
+    
     if args.sage:
         print(f"--sage marker detected, using AdamW with lr adaptive to param importance")
         from bert_optim import UnstructAwareAdamW
@@ -213,8 +213,9 @@ def main(args):
         epoch = -1
         model.load_state_dict(torch.load(f"./{args.task}_latest.pth"))   
         print(f"loaded checkpoint at {args.task}_latest.pth")
+        
+        total_acc = []
         for index, val_loader in enumerate(val_loaders):
-            total_acc = []
             y_hat, y, dev_loss = validate(epoch, tokenizer, model, device, val_loader)       
             result = acc.compute(references = y, predictions = y_hat)
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}")
@@ -225,8 +226,8 @@ def main(args):
         train(epoch, tokenizer, model, device, train_loader, optimizer, param_importance_dict=param_importance_dict)
         torch.save(model.state_dict(), f"{args.task}_latest.pth")
         
+        total_acc = []
         for index, val_loader in enumerate(val_loaders):
-            total_acc = []
             y_hat, y, dev_loss = validate(epoch, tokenizer, model, device, val_loader)       
             result = acc.compute(references = y, predictions = y_hat)
             print(f"epoch = {epoch} | language = {val_languages[index]} | acc = {result['accuracy']}")
