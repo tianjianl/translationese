@@ -43,7 +43,7 @@ class CustomClassificationDataset(Dataset):
             'label': tgt
         }
  
-def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None):
+def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None, prob=None):
     model.train()
     start = time.time()
     loss_fn = nn.NLLLoss()
@@ -51,6 +51,13 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
     #initializing parameter importance dictionary
 
     for iteration, data in enumerate(loader, 0):
+        
+        # Dropconnect: applying dropout in parameters 
+        if prob != None:
+            for _, params in model.named_parameters():
+                if params.requires_grad:
+                    params = F.dropout(params, p=prob) 
+        
         x = data['source_ids'].to(device, dtype = torch.long)
         x_mask = data['source_mask'].to(device, dtype = torch.long)
         y = data['label'].to(device)
@@ -162,6 +169,8 @@ def main(args):
     wandb_name = f"{args.lr}-{args.seed}-{args.task}-{args.regularizer}"
     if args.sage:
         wandb_name += '-sage'
+    if args.dropconnect:
+        wandb_name += '-dc'
     wandb.init(project=f"xlmr_large_robust_ft", entity="dogtooooth", name=wandb_name)
 
     n_class = class_dict[args.task]
@@ -212,7 +221,8 @@ def main(args):
     regularizer = None
     if args.regularizer != None:
         regularizer = Regularizer(model = model, alpha = 1, dataset = train_loader, regularizer_type = args.regularizer)
-
+    
+    dropconnect_p = args.dropconnect_prob if args.dropconnect else None
     wandb.watch(model, log="all")
     if args.epoch == -1 or args.load_checkpoint:
         epoch = -1
@@ -228,7 +238,7 @@ def main(args):
         print(f"total acc = {np.mean(total_acc)}")    
                    
     for epoch in range(args.epoch):
-        train(epoch, tokenizer, model, device, train_loader, optimizer, param_importance_dict=param_importance_dict)
+        train(epoch, tokenizer, model, device, train_loader, optimizer, param_importance_dict=param_importance_dict, prob=dropconnect_p)
         torch.save(model.state_dict(), f"{args.task}_latest.pth")
         
         total_acc = []
@@ -242,6 +252,7 @@ def main(args):
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    #basic training arguments
     parser.add_argument("--load_checkpoint", action='store_true')
     parser.add_argument("--epoch", default=15, type=int)
     parser.add_argument("--bs", default=32, type=int)
@@ -249,9 +260,13 @@ if __name__ == "__main__":
     parser.add_argument("--task", default='xnli')
     parser.add_argument("--seed", default=1104, type=int)
     parser.add_argument("--max_len", default=256, type=int)
+    
+    #regularizers, tricks, plots...
     parser.add_argument("--sage", action='store_true')
     parser.add_argument("--plot_params", action='store_true')
     parser.add_argument("--regularizer", default=None)
+    parser.add_argument("--dropconnect", action='store_true')
+    parser.add_argument("--dropconnect_prob", default=0.1, type=float, help="only meaningful if dropconnect is used")
     args = parser.parse_args()
     
     for k, v in vars(args).items():
