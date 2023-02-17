@@ -18,7 +18,7 @@ To download the data: `bash scripts/download_data.sh`
 | [SAGE](https://openreview.net/pdf?id=cuvga_CiVND) |      | 87.0 |
 | [R3F](https://arxiv.org/abs/2008.03156)  |      | **88.1** |
 | [EWC](https://arxiv.org/abs/1612.00796)  |      | 87.8|
-| [Dropconnect](https://proceedings.mlr.press/v28/wan13.html) | | |
+| [Dropconnect](https://proceedings.mlr.press/v28/wan13.html) | | **88.1** |
 ### Running with your own configuration of hyper-parameters
 
 First see `utils.py` and add your task, then run
