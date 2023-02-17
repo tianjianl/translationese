@@ -17,7 +17,7 @@ To download the data: `bash scripts/download_data.sh`
 | Reproduced |  | 87.5 |
 | [SAGE](https://openreview.net/pdf?id=cuvga_CiVND) |      | 87.0 |
 | [R3F](https://arxiv.org/abs/2008.03156)  |      | 88.1 |
-| [EWC](https://arxiv.org/abs/1612.00796)  |      |  |
+| [EWC](https://arxiv.org/abs/1612.00796)  |      | 87.8|
 
 ### Running with your own configuration of hyper-parameters
 
