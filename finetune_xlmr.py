@@ -42,14 +42,13 @@ class CustomClassificationDataset(Dataset):
             'source_mask': source_mask.to(dtype=torch.long), 
             'label': tgt
         }
- 
+
 def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None, prob=None):
     model.train()
     start = time.time()
     loss_fn = nn.NLLLoss()
     
     #initializing parameter importance dictionary
-
     for iteration, data in enumerate(loader, 0):
         
         # Dropconnect: applying dropout in parameters 
@@ -77,26 +76,34 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
         loss.backward()
         optimizer.step()
         
+
+
         if iteration%200 == 0 and param_importance_dict != None:
+            
+            importances = [[] for _ in range(24)]
             #update param_importance_dict
             for name, params in model.named_parameters():
+                layer_num = name.split('.')[3]
                 if params.requires_grad:
                     grad = params.grad.clone().detach().view(-1)
                     params = params.clone().detach().view(-1)
                     score = torch.abs(grad*params)
                     score = score.to("cpu")
-                    
-                    mu = torch.mean(score)
-                    sigma = torch.std(score)
-                    param_importance_dict[name].append((mu.item(), sigma.item()))
+                    importances[layer_num - 1].extend(score.tolist())        
+                    #mu = torch.mean(score)
+                    #sigma = torch.std(score)
+                    #param_importance_dict[name].append((mu.item(), sigma.item()))
             
-            temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1][0])
+            #temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1][0])
             
-            for item in temp:
-                print(item[0])
-                print(f"mean = {param_importance_dict[item[0]][-1][0]}")
-                print(f"std = {param_importance_dict[item[0]][-1][1]}")
-    
+            #for item in temp:
+            #    print(item[0])
+            #    print(f"mean = {param_importance_dict[item[0]][-1][0]}")
+            #    print(f"std = {param_importance_dict[item[0]][-1][1]}")
+        
+            for i in range(1, 25):
+                param_importance_by_layer[i].append(np.mean(importances[i-1]))
+                print(f"layer {i}, score {np.mean(importances[i-1])}")
     end = time.time()
     print(f'Epoch: {epoch} used {end-start} seconds')
     
