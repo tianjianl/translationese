@@ -43,7 +43,6 @@ class CustomClassificationDataset(Dataset):
             'label': tgt
         }
 
-param_importance_by_layer = [[] for _ in range(24)]
 def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None, prob=None):
     model.train()
     start = time.time()
@@ -84,11 +83,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
             importances = [[] for _ in range(24)]
             #update param_importance_dict
             for name, params in model.named_parameters():
-                layer_num = name.split('.')
-                if len(layer_num) <= 3 or layer_num[3].isnumeric() == False:
-                    continue
-                else:
-                    layer_num = int(layer_num[3])
+                layer_num = int(name.split('.')[3])
                 if params.requires_grad:
                     grad = params.grad.clone().detach().view(-1)
                     params = params.clone().detach().view(-1)
@@ -107,7 +102,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
             #    print(f"std = {param_importance_dict[item[0]][-1][1]}")
         
             for i in range(1, 25):
-                param_importance_by_layer[i-1].append(np.mean(importances[i-1]))
+                param_importance_by_layer[i].append(np.mean(importances[i-1]))
                 print(f"layer {i}, score {np.mean(importances[i-1])}")
     end = time.time()
     print(f'Epoch: {epoch} used {end-start} seconds')
@@ -261,9 +256,7 @@ def main(args):
             total_acc.append(result['accuracy'])
             
         print(f"epoch = {epoch} | acc = {np.mean(total_acc)}")
-
-    for i in range(24):
-        print(param_importance_by_layer[i])
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     #basic training arguments
