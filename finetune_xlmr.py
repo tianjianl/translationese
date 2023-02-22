@@ -183,7 +183,7 @@ def main(args):
         wandb_name += '-sage'
     if args.dropconnect:
         wandb_name += '-dc'
-    wandb.init(project=f"xlmr_large_robust_ft", entity="dogtooooth", name=wandb_name)
+    wandb.init(project=f"plots", entity="dogtooooth", name=wandb_name)
 
     n_class = class_dict[args.task]
     tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-large')
