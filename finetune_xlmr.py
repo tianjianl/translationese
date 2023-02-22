@@ -44,6 +44,21 @@ class CustomClassificationDataset(Dataset):
         }
 
 param_importance_by_layer = [[] for _ in range(24)]
+
+def generate_binary_outcomes(probabilities):
+    outcomes = []
+    for p in probabilities:
+        outcomes.append(random.choices([0, 1], weights=[p, 1-p])[0])
+    return outcomes
+
+def weighted_dropout(params, probs):
+    """
+    returns a params tensor that is the original value or 0 depending on its probability 
+    """
+    assert params.shape == probs.shape
+    mask = generate_binary_outcomes(probs)
+    return params.clone() * mask
+
 def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None, prob=None):
     model.train()
     start = time.time()
@@ -52,12 +67,17 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
     #initializing parameter importance dictionary
     for iteration, data in enumerate(loader, 0):
         
-        # Dropconnect: applying dropout in parameters 
         if prob != None:
             for _, params in model.named_parameters():
                 if params.requires_grad:
-                    params = F.dropout(params, p=prob) 
-        
+                    grad = params.grad.clone().detach().view(-1)
+                    p = params.clone().detach().view(-1)
+                    score = torch.abs(grad*p)
+                    score = score.to("cpu")
+                    score = F.normalize(score, p=1)
+                    # perform weighted dropout, the probability that a certain parameter is masked is larger if it is more important
+                    params = weighted_dropout(params, scores)
+                        
         x = data['source_ids'].to(device, dtype = torch.long)
         x_mask = data['source_mask'].to(device, dtype = torch.long)
         y = data['label'].to(device)
@@ -95,13 +115,15 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
                     score = torch.abs(grad*params)
                     score = score.to("cpu")
                     importances[layer_num - 1].extend(score.tolist())        
-                    #mu = torch.mean(score)
+                    mu = torch.mean(score)
                     #sigma = torch.std(score)
-                    #param_importance_dict[name].append((mu.item(), sigma.item()))
+                    param_importance_dict[name].append((mu.item(), sigma.item()))
             
-            #temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1][0])
+            temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1][0])
             
-            #for item in temp:
+
+            for item in temp:
+            
             #    print(item[0])
             #    print(f"mean = {param_importance_dict[item[0]][-1][0]}")
             #    print(f"std = {param_importance_dict[item[0]][-1][1]}")
