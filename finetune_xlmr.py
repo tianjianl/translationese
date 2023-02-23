@@ -1,5 +1,6 @@
 import time
 import torch
+import random
 import wandb
 import argparse
 import numpy as np
@@ -49,15 +50,18 @@ def generate_binary_outcomes(probabilities):
     outcomes = []
     for p in probabilities:
         outcomes.append(random.choices([0, 1], weights=[p, 1-p])[0])
-    return outcomes
+    return torch.tensor(outcomes, device='cuda')
 
 def weighted_dropout(params, probs):
+    
     """
     returns a params tensor that is the original value or 0 depending on its probability 
     """
-    assert params.shape == probs.shape
+    param_shape = params.shape
+    params = params.clone().view(-1)
     mask = generate_binary_outcomes(probs)
-    return params.clone() * mask
+    params = params * mask
+    return params.view(param_shape)
 
 def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None, prob=None):
     model.train()
@@ -67,17 +71,6 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
     #initializing parameter importance dictionary
     for iteration, data in enumerate(loader, 0):
         
-        if prob != None:
-            for _, params in model.named_parameters():
-                if params.requires_grad:
-                    grad = params.grad.clone().detach().view(-1)
-                    p = params.clone().detach().view(-1)
-                    score = torch.abs(grad*p)
-                    score = score.to("cpu")
-                    score = F.normalize(score, p=1)
-                    # perform weighted dropout, the probability that a certain parameter is masked is larger if it is more important
-                    params = weighted_dropout(params, scores)
-                        
         x = data['source_ids'].to(device, dtype = torch.long)
         x_mask = data['source_mask'].to(device, dtype = torch.long)
         y = data['label'].to(device)
@@ -97,7 +90,26 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
         loss.backward()
         optimizer.step()
         
-
+        """
+        if iteration % 100 == 0:
+            if prob != None:
+                for name, params in model.named_parameters():
+                    if 'embeddings' in name:
+                        continue
+                    
+                    if params.requires_grad:
+                        grad = params.grad.clone().detach().view(-1)
+                        p = params.clone().detach().view(-1)
+                        scores = torch.abs(grad*p)
+                        scores = scores.to("cpu")
+                        
+                        print("before normalizing")
+                        scores = F.normalize(scores, p=1, dim=0)
+                        print("after normalize")
+                        #perform weighted dropout, the probability that a certain parameter is masked is larger if it is more important
+                        params = weighted_dropout(params, scores)
+                        print("after weighted dropout")
+        """
 
         if iteration%200 == 0 and param_importance_dict != None:
             
@@ -115,22 +127,39 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
                     score = torch.abs(grad*params)
                     score = score.to("cpu")
                     importances[layer_num - 1].extend(score.tolist())        
-                    mu = torch.mean(score)
-                    #sigma = torch.std(score)
-                    param_importance_dict[name].append((mu.item(), sigma.item()))
+                    # mu = torch.mean(score)
+                    # sigma = torch.std(score)
+                    # param_importance_dict[name].append((mu.item(), sigma.item()))
             
-            temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1][0])
+            # temp = sorted(param_importance_dict.items(), key=lambda x:x[1][-1][0])
             
-
-            for item in temp:
+            # for item in temp:
             
             #    print(item[0])
             #    print(f"mean = {param_importance_dict[item[0]][-1][0]}")
             #    print(f"std = {param_importance_dict[item[0]][-1][1]}")
-        
+            
+            normalized_importances = []          
             for i in range(1, 25):
-                param_importance_by_layer[i-1].append(np.mean(importances[i-1]))
-                print(f"layer {i}, score {np.mean(importances[i-1])}")
+                layer_importance = np.mean(importances[i-1])
+                param_importance_by_layer[i-1].append(layer_importance)
+                print(f"layer {i}, score {layer_importance}")
+                normalized_importances.append(layer_importance)
+            
+            normalized_importances = torch.tensor(normalized_importances, device='cuda')
+            normalized_importances -= normalized_importances.min()
+            normalized_importances /= normalized_importances.max()
+            print(normalized_importances)
+            for name, params in model.named_parameters():
+                layer_num = name.split('.')
+                if len(layer_num) <= 3 or layer_num[3].isnumeric() == False:
+                    continue
+                else:
+                    layer_num = int(layer_num[3])
+
+                if params.requires_grad:
+                    params = F.dropout(params, p=normalized_importances[layer_num].item())
+
     end = time.time()
     print(f'Epoch: {epoch} used {end-start} seconds')
     
