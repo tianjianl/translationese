@@ -158,7 +158,7 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
                     layer_num = int(layer_num[3])
 
                 if params.requires_grad:
-                    params = F.dropout(params, p=normalized_importances[layer_num].item())
+                    params = F.dropout(params, p=normalized_importances[layer_num-1].item())
 
     end = time.time()
     print(f'Epoch: {epoch} used {end-start} seconds')
