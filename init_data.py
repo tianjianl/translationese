@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 from glob import glob
 
 def data_to_df(task, language, split):
@@ -27,6 +28,26 @@ def data_to_df(task, language, split):
         print(df.head(5)) 
         return df
     
+    elif task == 'tydiqa':
+        src_doc = f"../download/tydiqa/tydiqa-goldp-v1.1-{split}/tydiqa.goldp.{language}.{split}.json"
+        
+        f = open(src_doc, 'r')
+        src = []
+        tgt = []
+        dataset = json.load(f)['data']
+        for paragraphs in dataset:
+            for paragraph in paragraphs['paragraphs']:
+                context = paragraph['context']
+                for qa in paragraph['qas']:
+                    question = qa['question']
+                    src.append(context + " " + question)
+                    answers = [answer['text'] for answer in qa['answers']]
+                    answers_indices = [(answer['answer_start'], answer['answer_start'] + len(answer['text'].split(' '))- 1) for answer in qa['answers']]
+                    tgt.append(answers_indices[0])
+
+        df = pd.DataFrame({"src": src, "label": tgt})
+        print(df.head(5))
+        return df
     elif task == 'pawsx':
         filename = f"../download/pawsx/{split}-{language}.tsv"
         f = open(filename, 'r')

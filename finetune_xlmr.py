@@ -11,8 +11,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import cuda
 from torch.utils.data import Dataset, DataLoader, RandomSampler, SequentialSampler
-from transformers import XLMRobertaTokenizerFast, XLMRobertaForSequenceClassification
-from utils import data_to_df 
+from transformers import XLMRobertaTokenizerFast, XLMRobertaForSequenceClassification, XLMRobertaForQuestionAnswering
+from init_data import data_to_df 
 
 from rotk import Regularizer
 
@@ -47,11 +47,11 @@ class CustomClassificationDataset(Dataset):
 param_importance_by_layer = [[] for _ in range(24)]
 
 def generate_binary_outcomes(probabilities):
-    outcomes = []
-    for p in probabilities:
-        outcomes.append(random.choices([0, 1], weights=[p, 1-p])[0])
-    return torch.tensor(outcomes, device='cuda')
-
+    
+    logits = torch.rand(len(probabilities))
+    probs = probabilities.clone().detach()
+    mask = logits >= probs
+    return mask.to('cuda')
 def weighted_dropout(params, probs):
     
     """
@@ -90,27 +90,20 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
         loss.backward()
         optimizer.step()
         
-        """
-        if iteration % 100 == 0:
-            if prob != None:
-                for name, params in model.named_parameters():
-                    if 'embeddings' in name:
-                        continue
+        if iteration % 500 == 0 and prob != None:
+            for name, params in model.named_parameters():
+                if 'embeddings' in name:
+                    continue
                     
-                    if params.requires_grad:
-                        grad = params.grad.clone().detach().view(-1)
-                        p = params.clone().detach().view(-1)
-                        scores = torch.abs(grad*p)
-                        scores = scores.to("cpu")
-                        
-                        print("before normalizing")
-                        scores = F.normalize(scores, p=1, dim=0)
-                        print("after normalize")
-                        #perform weighted dropout, the probability that a certain parameter is masked is larger if it is more important
-                        params = weighted_dropout(params, scores)
-                        print("after weighted dropout")
-        """
-
+                if params.requires_grad:
+                    grad = params.grad.clone().detach().view(-1)
+                    p = params.clone().detach().view(-1)
+                    scores = torch.abs(grad*p)
+                    scores = scores.to("cpu")
+                    scores = F.normalize(scores, p=1, dim=0)
+                    #perform weighted dropout, the probability that a certain parameter is masked is larger if it is more important
+                    params = weighted_dropout(params, scores)
+        """   
         if iteration%200 == 0 and param_importance_dict != None:
             
             importances = [[] for _ in range(24)]
@@ -149,17 +142,23 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
             normalized_importances = torch.tensor(normalized_importances, device='cuda')
             normalized_importances -= normalized_importances.min()
             normalized_importances /= normalized_importances.max()
-            print(normalized_importances)
+            normalized_importances *= 0.9
+            
             for name, params in model.named_parameters():
                 layer_num = name.split('.')
                 if len(layer_num) <= 3 or layer_num[3].isnumeric() == False:
                     continue
                 else:
                     layer_num = int(layer_num[3])
-
+                if name == 'roberta.encoder.layer.1.output.LayerNorm.weight':
+                    print("before dropout")
+                    print(params[0:5])
                 if params.requires_grad:
-                    params = F.dropout(params, p=normalized_importances[layer_num].item())
-
+                    params = F.dropout(params, p=normalized_importances[layer_num-1].item())
+                if name == 'roberta.encoder.layer.1.output.LayerNorm.weight':
+                    print("after dropout")
+                    print(params[0:5])
+        """
     end = time.time()
     print(f'Epoch: {epoch} used {end-start} seconds')
     
@@ -200,6 +199,7 @@ class_dict = {'xnli': 3 ,
 
 val_languages_dict = {'xnli': ['en', 'de', 'es', 'bg', 'th', 'zh', 'ur', 'vi', 'ar', 'tr', 'fr', 'ru', 'hi', 'sw', 'el'], 
                       'pawsx': ['en', 'de', 'es', 'fr', 'ja', 'ko', 'zh'],
+                      'tydiqa': ['en', 'ar', 'bn', 'fi', 'id', 'ko', 'ru', 'sw', 'te'],
                       'td': ['en'],
                       'ape': ['de']}
 
@@ -236,10 +236,15 @@ def main(args):
         wandb_name += '-dc'
     wandb.init(project=f"plots", entity="dogtooooth", name=wandb_name)
 
-    n_class = class_dict[args.task]
+    if args.task in ['xnli', 'pawsx']:
+        n_class = class_dict[args.task]
     tokenizer = XLMRobertaTokenizerFast.from_pretrained('xlm-roberta-large')
     
-    model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-large", num_labels=n_class)
+    if args.task in ['xnli', 'pawsx']:
+        model = XLMRobertaForSequenceClassification.from_pretrained("xlm-roberta-large", num_labels=n_class)
+    elif args.task in ['xquad', 'mlqa', 'tydiqa']:
+        model = XLMRobertaForQuestionAnswering.from_pretrained("xlm-roberta-large")
+        
     model.to(device)
     
     torch.manual_seed(args.seed) # pytorch random seed

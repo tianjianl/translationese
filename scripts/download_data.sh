@@ -304,7 +304,7 @@ download_pawsx
 #download_squad
 #download_xquad
 #download_mlqa
-#download_tydiqa
+download_tydiqa
 #download_udpos
 #download_panx
 #download_xcopa
