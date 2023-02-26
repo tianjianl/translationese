@@ -100,9 +100,10 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
                     p = params.clone().detach().view(-1)
                     scores = torch.abs(grad*p)
                     scores = scores.to("cpu")
-                    scores = F.normalize(scores, p=1, dim=0)
+                    scaled_scores = scores - scores.min()
+                    scaled_scores /= scores.max()
                     #perform weighted dropout, the probability that a certain parameter is masked is larger if it is more important
-                    params = weighted_dropout(params, scores)
+                    params = weighted_dropout(params, scaled_scores)
         """   
         if iteration%200 == 0 and param_importance_dict != None:
             
@@ -318,8 +319,8 @@ def main(args):
             
         print(f"epoch = {epoch} | acc = {np.mean(total_acc)}")
 
-    for i in range(24):
-        print(param_importance_by_layer[i])
+    #for i in range(24):
+    #    print(param_importance_by_layer[i])
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     #basic training arguments
