@@ -70,10 +70,7 @@ class FairseqTask(object):
         if dc is not None:
             gen_parser_from_dataclass(parser, dc())
 
-    @staticmethod
-    def logging_outputs_can_be_summed(criterion) -> bool:
-        """
-        Whether the logging outputs returned by `train_step` and `valid_step` can
+train_step` and `valid_step` can
         be summed across workers prior to calling `aggregate_logging_outputs`.
         Setting this to True will improves distributed training speed.
         """
