@@ -35,7 +35,7 @@ class Regularizer(object):
         
         for n, p in deepcopy(self.params).items():
             self._means[n] = Variable(p.data)
-    
+ 
     def compute_fisher(self):
         fisher = {}
         for n, p in deepcopy(self.params).items():
@@ -93,6 +93,21 @@ class Regularizer(object):
                 loss += _loss.sum()
             return self.alpha*loss
         
+        elif self.regularizer == 'id':
+            
+            logits = []
+            for _ in range(3):
+                output = model(input_ids=input_ids, attention_mask=attention_mask)
+                logits.append(output.logits)
+            
+            mean_logits = torch.mean(logits, dim=0)
+
+            for logit in logits:
+                _loss = compute_sym_kl(logit, mean_logits)
+                loss += loss
+            
+            return self.alpha*loss
+
         elif self.regularizer == 'r3f':
             
             config = XLMRobertaConfig() 

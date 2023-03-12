@@ -52,6 +52,7 @@ def generate_binary_outcomes(probabilities):
     probs = probabilities.clone().detach()
     mask = logits >= probs
     return mask.to('cuda')
+
 def weighted_dropout(params, probs):
     
     """
@@ -63,7 +64,8 @@ def weighted_dropout(params, probs):
     params = params * mask
     return params.view(param_shape)
 
-def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None, prob=None):
+def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, regularizer=None, param_importance_dict=None, weighted_dropout_iters=0):
+    
     model.train()
     start = time.time()
     loss_fn = nn.NLLLoss()
@@ -90,7 +92,10 @@ def train(epoch, tokenizer, model, device, loader, optimizer, scheduler=None, re
         loss.backward()
         optimizer.step()
         
-        if iteration % 500 == 0 and prob != None:
+        if weighted_dropout_iters == 0:
+            continue
+
+        if iteration % weighted_dropout_iters == 0:
             for name, params in model.named_parameters():
                 if 'embeddings' in name:
                     continue
@@ -233,8 +238,8 @@ def main(args):
     wandb_name = f"{args.lr}-{args.seed}-{args.task}-{args.regularizer}"
     if args.sage:
         wandb_name += '-sage'
-    if args.dropconnect:
-        wandb_name += '-dc'
+    if args.weighted_dropout_iters > 0:
+        wandb_name += f'-wd-{args.weighted_dropout_iters}'
     wandb.init(project=f"plots", entity="dogtooooth", name=wandb_name)
 
     if args.task in ['xnli', 'pawsx']:
@@ -291,7 +296,6 @@ def main(args):
     if args.regularizer != None:
         regularizer = Regularizer(model = model, alpha = 1, dataset = train_loader, regularizer_type = args.regularizer)
     
-    dropconnect_p = args.dropconnect_prob if args.dropconnect else None
     wandb.watch(model, log="all")
     if args.epoch == -1 or args.load_checkpoint:
         epoch = -1
@@ -307,7 +311,7 @@ def main(args):
         print(f"total acc = {np.mean(total_acc)}")    
                    
     for epoch in range(args.epoch):
-        train(epoch, tokenizer, model, device, train_loader, optimizer, param_importance_dict=param_importance_dict, prob=dropconnect_p)
+        train(epoch, tokenizer, model, device, train_loader, optimizer, param_importance_dict=param_importance_dict, wd_iter=args.weighted_dropout_iters)
         torch.save(model.state_dict(), f"{args.task}_latest.pth")
         
         total_acc = []
@@ -336,8 +340,7 @@ if __name__ == "__main__":
     parser.add_argument("--sage", action='store_true')
     parser.add_argument("--plot_params", action='store_true')
     parser.add_argument("--regularizer", default=None)
-    parser.add_argument("--dropconnect", action='store_true')
-    parser.add_argument("--dropconnect_prob", default=0.1, type=float, help="only meaningful if dropconnect is used")
+    parser.add_argument("--weighted_dropout_iters", type=int, help="interval for calculating weighted dropout")
     args = parser.parse_args()
     
     for k, v in vars(args).items():
