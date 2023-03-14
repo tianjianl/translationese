@@ -21,7 +21,7 @@ To download the data: `bash scripts/download_data.sh`
 | [Dropconnect](https://proceedings.mlr.press/v28/wan13.html) | | **88.6** |
 ### Running with your own configuration of hyper-parameters
 
-First see `utils.py` and add your task, then run
+First see `init_data.py` and add your task, then run
 
 ```
 python3 finetune_xlmr.py --task {your task} \
